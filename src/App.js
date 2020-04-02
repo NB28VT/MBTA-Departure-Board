@@ -1,11 +1,11 @@
 import React from 'react';
-import { Board } from './components/Board.jsx';
+import { DepartureBoard } from './components/DepartureBoard.jsx';
 
 
 function App() {
   return (
     <div>
-      <Board/>
+      <DepartureBoard/>
     </div>
   );
 }
