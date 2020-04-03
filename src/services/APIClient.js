@@ -1,4 +1,7 @@
-export default class APIClient {
+// NO. Requires schema, fuck that
+// import JSONAPISerializer from 'json-api-serializer'
+
+export class APIClient {
     constructor() {
         this.baseURL = "https://api-v3.mbta.com/"
     }
