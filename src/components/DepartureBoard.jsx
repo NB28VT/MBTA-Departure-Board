@@ -59,14 +59,14 @@ class DepartureBoardModel {
             if (!schedule.prediction) {
                 const defaultPredictionData = {
                     track: "TBD",
-                    status: "On time"
+                    status: "ON TIME",
                 }
               return Object.assign(departure, defaultPredictionData)
             }
 
             const predictionData = {
                 track: schedule.prediction.stop.id,
-                status: schedule.prediction.status,
+                status: schedule.prediction.status.toUpperCase(),
             }
 
             return Object.assign(departure, predictionData)
@@ -91,15 +91,59 @@ export class DepartureBoard extends React.Component {
 
     async componentDidMount() {
         const departures = await this.model.getCurrentDepartures()
-        console.log(departures)
-        // I think this just works:
-        this.setState(departures)
+        this.setState({departures: departures})
     }
 
     render() {
+        const style = {
+            container: {
+
+                "backgroundColor": "black",
+                fontSize: 30,
+                // "height": "100%",
+            },
+            header: {
+                "color": "white",
+            },
+            // South station is actually more orangey
+            rows: {
+                "color": "#EBDC2B",
+                fontFamily: "Roboto Mono, monospace",
+
+            },
+            cell: {
+                padding: 10,
+            }
+        }
+
+        const departureRows = this.state.departures.map(departure => {
+            return (
+                <tr style={style.rows}>
+                    <th style={style.cell}>MBTA</th>
+                    <th style={style.cell}>{departure.departureTime}</th>
+                    <th style={style.cell}>{departure.destination}</th>
+                    <th style={style.cell}>{departure.trainNumber}</th>
+                    <th style={style.cell}>{departure.trackNumber}</th>
+                    <th style={style.cell}>{departure.status}</th>
+                </tr>
+            )
+        })
+
         return (
-            <div>
-                Table Goes Here
+            <div style={style.container}>
+                <table>
+                    <thead style={style.header}>
+                        <tr>
+                            <th>Carrier</th>
+                            <th>Time</th>
+                            <th>Destination</th>
+                            <th>Train#</th>
+                            <th>Track#</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    {departureRows}
+                </table>
             </div>
         )
     }
