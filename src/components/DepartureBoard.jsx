@@ -49,8 +49,9 @@ class DepartureBoardModel {
 
         return serialized.map(schedule => {
             // Maybe separate branches if predicitions aren't present. it may raise
+            // Clean up
             const departure = {
-                departureTime: schedule.departure_time,
+                departureTime: new Date (schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
                 destination: schedule.route.direction_destinations[0],
                 trainNumber: schedule.trip.name,
             }
