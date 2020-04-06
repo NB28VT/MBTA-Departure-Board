@@ -1,5 +1,5 @@
 import React from 'react';
-import { DepartureBoard } from './components/DepartureBoard.jsx';
+import { SouthStationDepartureBoard } from './components/DepartureBoard';
 import { stationBackground } from "./images/southstation.jpeg"
 
 
@@ -16,7 +16,7 @@ function App() {
 
   return (
     <div style={style}>
-      <DepartureBoard/>
+      <SouthStationDepartureBoard/>
     </div>
   );
 }
