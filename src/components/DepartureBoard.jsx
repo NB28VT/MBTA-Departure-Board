@@ -48,23 +48,26 @@ class DepartureBoardModel {
         // We need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
         const serializedEvents = {data: JSON.parse(event.data)}
 
+        // This is digusting we need a better way to handle this
         const normalizedEvents = this.dataStore.sync(serializedEvents)
-        const predictions = this.dataStore.findAll('prediction')
+        const predictions = this.dataStore.findAll('prediction')        // Might be able to combine these
         const allPredictions =  predictions.map(prediction => this._parsePrediction(prediction))
+
+        // Yeah def combine these - use like a method just for filtering
         const withDepartureTimes = allPredictions.filter(prediction => prediction.departureTime)
         const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
 
-        return hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
+        const sorted = hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
+
+        return sorted.slice(0, 15)
     }
 
     _parsePrediction(prediction) {
         // We don't appear to have access to track number any more, although at one time it appeared as a prediction attribute -
         // "stop_id": https://www.mbta.com/developers/v3-api/changelog
-        const departureTime = prediction.departure_time || prediction.schedule.departure_time
-        const formattedDepartureTime = new Date (departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
 
         return {
-            departureTime: formattedDepartureTime,
+            departureTime: prediction.departure_time || prediction.schedule.departure_time,
             destination: prediction.trip.headsign,
             trainNumber: prediction.trip.name || "TBD",
             trackNumber: "TBD",
@@ -107,28 +110,36 @@ export class SouthStationDepartureBoard extends React.Component {
     render() {
         const style = {
             container: {
-                "backgroundColor": "black",
-                fontSize: 30,
+                backgroundImage: "linear-gradient(to top left, #000000, #333333)",
+                width: '50vw',
+                fontSize: "auto",
+                borderRadius: 5,
             },
-            header: {
-                "color": "white",
+            headerRow: {
+                color: "white",
+
             },
             // South station is actually more orangey
             rows: {
-                "color": "#EBDC2B",
+                color: "#EBDC2B",
                 fontFamily: "Roboto Mono, monospace",
 
             },
-            cell: {
-                padding: 10,
+            table: {
+                width: "100%",
             }
         }
 
         const departureRows = this.state.departures.map(departure => {
+
+            const formattedDepartureTime = new Date (departure.departureTime).toLocaleTimeString(
+                [], {hour: '2-digit', minute:'2-digit'}
+            )
+
             return (
                 <tr style={style.rows}>
                     <th style={style.cell}>MBTA</th>
-                    <th style={style.cell}>{departure.departureTime}</th>
+                    <th style={style.cell}>{formattedDepartureTime}</th>
                     <th style={style.cell}>{departure.destination}</th>
                     <th style={style.cell}>{departure.trainNumber}</th>
                     <th style={style.cell}>{departure.trackNumber}</th>
@@ -139,9 +150,9 @@ export class SouthStationDepartureBoard extends React.Component {
 
         return (
             <div style={style.container}>
-                <table>
-                    <thead style={style.header}>
-                        <tr>
+                <table style={style.table}>
+                    <thead>
+                        <tr style={style.headerRow}>
                             <th>Carrier</th>
                             <th>Time</th>
                             <th>Destination</th>
@@ -150,7 +161,9 @@ export class SouthStationDepartureBoard extends React.Component {
                             <th>Status</th>
                         </tr>
                     </thead>
-                    {departureRows}
+                    <tbody>
+                        {departureRows}
+                    </tbody>
                 </table>
             </div>
         )

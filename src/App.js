@@ -1,17 +1,19 @@
 import React from 'react';
 import { SouthStationDepartureBoard } from './components/DepartureBoard';
-import { stationBackground } from "./images/southstation.jpeg"
+import stationBackground from "./images/southstation.jpeg"
 
 
 function App() {
+  console.log(stationBackground)
   const style = {
-    // backgroundImage: `url(${stationBackground})`,
+    backgroundImage: `url(${stationBackground})`,
+    backgroundSize: 'cover',
     display: "flex",
     alignItems: "center",
     justifyContent: "top",
-    background: "gray",
     flexDirection: "column",
     height: '100vh',
+    width: '100vw',
   }
 
   return (
