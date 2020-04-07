@@ -60,8 +60,11 @@ class DepartureBoardModel {
     _parsePrediction(prediction) {
         // We don't appear to have access to track number any more, although at one time it appeared as a prediction attribute -
         // "stop_id": https://www.mbta.com/developers/v3-api/changelog
+        const departureTime = prediction.departure_time || prediction.schedule.departure_time
+        const formattedDepartureTime = new Date (departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+
         return {
-            departureTime: prediction.departure_time || prediction.schedule.departure_time,
+            departureTime: formattedDepartureTime,
             destination: prediction.trip.headsign,
             trainNumber: prediction.trip.name || "TBD",
             trackNumber: "TBD",
