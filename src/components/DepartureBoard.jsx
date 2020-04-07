@@ -20,7 +20,6 @@ class DepartureBoardModel {
         })
     }
 
-    // Or whatever better name... call in component will unmount
     stopListeningForDepartureUpdates() {
         this.departuresUpdateSource.close()
     }
