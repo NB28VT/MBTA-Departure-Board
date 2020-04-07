@@ -2,8 +2,6 @@ import React from 'react'
 import { APIClient } from '../services/APIClient'
 import { JsonApiDataStore } from 'jsonapi-datastore'
 
-// For use with streaming off of EventSource
-// Could use mobx here to track the state of the departures, might be easier than passing onReset callback function
 class DepartureBoardModel {
     constructor(routeType, stationID, pageLimit) {
         this.routeType = routeType
@@ -11,14 +9,12 @@ class DepartureBoardModel {
         this.pageLimit = pageLimit
 
         const departureEndpoint = this._buildPredictionsEndpoint()
-        console.log("Departure endpoint", departureEndpoint)
         this.departuresUpdateSource = new EventSource(departureEndpoint)
         this.dataStore = new JsonApiDataStore()
     }
 
     listenForDepartureUpdates(onResetDepartures) {
         this.departuresUpdateSource.addEventListener("reset", (event) => {
-            console.log(event)
             const updatedDepartures = this._parsePredictionsUpdate(event)
             onResetDepartures(updatedDepartures)
         })
@@ -30,196 +26,51 @@ class DepartureBoardModel {
     }
 
     _buildPredictionsEndpoint() {
-        // FUCK WE CAN'T GET MAX TIME FUCK FUCK FUCK FUCK FUCK 
-
-        // BUT IF WE SORT WE CAN PROBABLY GET IT
         const base_url = "https://api-v3.mbta.com/predictions?"
         const filters = `filter[route_type]=${this.routeType}&filter[stop]=${this.stationID}`
         const limit = `&page[limit]=${this.pageLimit}`
-        const include = '&include=schedule,trip,route'
+        const include = '&include=schedule,trip'
         const api_key = `&api_key=${process.env.REACT_APP_MBTA_API_KEY}`
 
         return base_url + filters + limit + include + api_key
     }
 
     _parsePredictionsUpdate(event) {
-        // Need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
+        /**
+         * Parses Event Stream updates from the MBTA Predictions endpoint. Because neither the prediction nor its related schedule
+         * will always have a departure time, we filter out anything missing that data. We also filter out trips that have already
+         * departed. Because we are falling back on the schedule departure time if the prediction departure time is missing, we can't
+         * simply sort on departure time off of the predcitions endpoint. Instead, we manually sort the data by departure time
+         * ascending once we've filtered it.
+         *
+         * TODO: find a better way to handle missing departure times if possible.
+         */
+
+        // We need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
         const serializedEvents = {data: JSON.parse(event.data)}
+
         const normalizedEvents = this.dataStore.sync(serializedEvents)
         const predictions = this.dataStore.findAll('prediction')
+        const allPredictions =  predictions.map(prediction => this._parsePrediction(prediction))
+        const withDepartureTimes = allPredictions.filter(prediction => prediction.departureTime)
+        const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
 
-        // THIS IS STILL NOT GETTING PARSED CORRECTLY!
+        return hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
+    }
 
-        // Play with predicitons - some of these are missing schedules and routes and it's bizarre
-        // debugger;
-
-        return predictions.map(prediction => this._parsePrediction(prediction))
-            // }
+    _parsePrediction(prediction) {
+        // We don't appear to have access to track number any more, although at one time it appeared as a prediction attribute -
+        // "stop_id": https://www.mbta.com/developers/v3-api/changelog
+        return {
+            departureTime: prediction.departure_time || prediction.schedule.departure_time,
+            destination: prediction.trip.headsign,
+            trainNumber: prediction.trip.name || "TBD",
+            trackNumber: "TBD",
+            status: prediction.status || "ON TIME",
         }
-
-        _parsePrediction(prediction) {
-            return {
-                departureTime: prediction.departure_time || prediction.schedule.departure_time || "TBD",
-                destination: prediction.route.direction_destinations[0],
-                trainNumber: prediction.trip.name || "TBD",
-                status: prediction.status || "ON TIME",
-            }
-        }
-
-
-
-
-
-        // return serialized.map(schedule => {
-            //             const departure = {
-            //                 departureTime: new Date (schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            //                 destination: schedule.route.direction_destinations[0],
-            //                 trainNumber: schedule.trip.name,
-            //             }
-            
-            //             if (!schedule.prediction) {
-            //                 const defaultPredictionData = {
-            //                     track: "TBD",
-            //                     status: "ON TIME",
-            //                 }
-            //               return Object.assign(departure, defaultPredictionData)
-            //             }
-            
-            //             const predictionData = {
-            //                 track: schedule.prediction.stop.id,
-            //                 status: schedule.prediction.status.toUpperCase(),
-            //             }
-            
-            //             return Object.assign(departure, predictionData)
-            //         })
-            //     }
-
-    
-
-
-
-
-
-
-
-
-
+    }
 }
 
-
-
-
-
-
-
-// This is getting initted twice probably because it's in the constrcutr of the component itself and not in component did mount
-// class DepartureBoardStreamingModel {
-//     constructor() {
-//         console.log("Innited")
-
-//         // This endpoint does not appear to fire a lot of events
-//         const url = "https://api-v3.mbta.com/predictions?"+ "filter[route_type]=2" + "&filter[stop]=place-sstat" + "&page[limit]=10" + `&api_key=${process.env.REACT_APP_MBTA_API_KEY}`
-
-//         this.eventSource = new EventSource(url)
-
-//         this.eventSource.addEventListener("reset", this.handleReset)
-
-
-
-
-
-//         this.eventSource.onerror = this.errorHandler
-//     }
-
-//     handleReset(event) {
-//         // First event fired
-//         console.log(event)
-//     }
-
-//     eventHandler(event) {
-//         debugger;
-//         // console.log(event)
-//     }
-
-
-//     errorHandler(event) {
-//         console.log(event)
-//     }
-
-//     // Start with simple index call on all predictions first (limit )
-
-
-
-// }
-
-// class DepartureBoardModel {
-//     constructor(stationCode, routeType) {
-//         this.stationCode = stationCode
-//         this.routeType = routeType
-
-//         this.apiClient = new APIClient()
-//         this.dataStore = new JsonApiDataStore()
-
-//     }
-
-//     async getCurrentDepartures() {
-//         // Need to retrieve commuter rail routes for south station first; schedule endpoint
-//         // cannot filter by route type
-//         const routeIDs = await this.getStationRouteIDs()
-
-
-//         const now = new Date()
-//         // TODO: I don't think this is going to work before 10, hours might return 2 instead of 02
-//         // TODO: use fields option to only get the fields you want for schedules
-//         const minTime = `${now.getHours()}:${now.getMinutes()}`
-//         const filters = `filter[stop]=${this.stationCode}&filter[route]=${routeIDs}&filter[min_time]=${minTime}`
-//         const include = '&include=prediction,trip,route'
-//         const sortAndLimit = '&sort=departure_time&page[limit]=10'
-//         const endpoint = 'schedules?' + filters + sortAndLimit + include
-
-//         const schedulesResponse = await this.apiClient.APIGet(endpoint)
-//         return this.buildDepartures(schedulesResponse)
-//     }
-
-//     async getStationRouteIDs() {
-//         // TODO: might be able to cache these in some way because they don't change, API supports 304 codes
-//         const endpoint = `routes?filter[type]=${this.routeType}&filter[stop]=${this.stationCode}&fields=id`
-//         const response = await this.apiClient.APIGet(endpoint)
-//         const serializedRoutes = this.dataStore.sync(response)
-
-//         return serializedRoutes.map(route => route.id).join()
-//     }
-
-//     buildDepartures(scheduleData) {
-//         const serialized = this.dataStore.sync(scheduleData)
-//         // TODO: not sure about how accurate destinations are 
-
-//         // This is South Station-04, I dunno if thats the track, maybe need to slice that
-//         // track: schedule.prediction.stop.id,
-//         return serialized.map(schedule => {
-//             const departure = {
-//                 departureTime: new Date (schedule.departure_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-//                 destination: schedule.route.direction_destinations[0],
-//                 trainNumber: schedule.trip.name,
-//             }
-
-//             if (!schedule.prediction) {
-//                 const defaultPredictionData = {
-//                     track: "TBD",
-//                     status: "ON TIME",
-//                 }
-//               return Object.assign(departure, defaultPredictionData)
-//             }
-
-//             const predictionData = {
-//                 track: schedule.prediction.stop.id,
-//                 status: schedule.prediction.status.toUpperCase(),
-//             }
-
-//             return Object.assign(departure, predictionData)
-//         })
-//     }
-// }
 
 export class SouthStationDepartureBoard extends React.Component {
     constructor(props) {
@@ -228,7 +79,9 @@ export class SouthStationDepartureBoard extends React.Component {
         // Codes for Commuter Rail routes that stop at South Station
         const stationID = "place-sstat"
         const routeType = 2
-        const pageLimit = 10
+
+        // For now: load more than we plan to display as we need to filter out incomplete data
+        const pageLimit = 30
 
         this.model = new DepartureBoardModel(routeType, stationID, pageLimit)
 
@@ -237,21 +90,16 @@ export class SouthStationDepartureBoard extends React.Component {
         }
     }
 
-    componentDidMount() {
-        // Maybe async await this
+    componentDidMount = () => {
         this.model.listenForDepartureUpdates(this.onResetDepartures)
     }
 
-    // Dunno if this is where we want to call this.
-    componentWillUnmount() {
+    componentWillUnmount = () => {
         this.model.stopListeningForDepartureUpdates()
     }
 
-    onResetDepartures(departures) {
-        console.log("Callback passed to board component")
-        console.log(departures)
-        // Let the model handle the parsing and update logic - it may need to keep its own 
-        // this.setState({departures: departures})
+    onResetDepartures = (departures) => {
+        this.setState({departures: departures})
     } 
 
     render() {
