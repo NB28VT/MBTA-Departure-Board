@@ -4,7 +4,6 @@ import stationBackground from "./images/southstation.jpeg"
 
 
 function App() {
-  console.log(stationBackground)
   const style = {
     backgroundImage: `url(${stationBackground})`,
     backgroundSize: 'cover',
