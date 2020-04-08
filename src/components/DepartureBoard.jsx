@@ -131,7 +131,6 @@ class BoardHeader extends React.Component {
                     <div>{dayOfWeek}</div>
                     <div>{this.state.time.toLocaleDateString()}</div>
                 </div>
-
                 <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
                 <div style={styles.titleColumn}>
                     <div>CURRENT TIME</div>
