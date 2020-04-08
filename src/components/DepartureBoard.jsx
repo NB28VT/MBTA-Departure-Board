@@ -2,6 +2,10 @@ import React from 'react'
 import { APIClient } from '../services/APIClient'
 import { JsonApiDataStore } from 'jsonapi-datastore'
 
+function formatTimeHHMM(date) {
+    return new Date(date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+}
+
 class DepartureBoardModel {
     constructor(routeType, stationID, pageLimit) {
         this.routeType = routeType
@@ -75,7 +79,26 @@ class DepartureBoardModel {
     }
 }
 
+
 class BoardHeader extends React.Component {
+    constructor(props) {
+        super(props)
+
+        this.state = {time: new Date()}
+    }
+
+    componentDidMount = () => {
+        this.timeCheck = setInterval(() =>  this.checkTime(), 1000)
+    }
+
+    componentWillUnmount = () => {
+        clearInterval(this.timeCheck)
+    }
+
+    checkTime = () => {
+        this.setState({time: new Date()})
+    }
+
     render() {
         const styles = {
             header: {
@@ -84,23 +107,36 @@ class BoardHeader extends React.Component {
                 justifyContent: 'space-between',
                 alignItems: 'flex-start',
                 margin: "5px 10px 0px 10px",
-                fontSize: "100%",
-                // This will change once you add the clock and the date
-                height: '5vh',
+                height: '6vh',
                 color: "#FFB400",
+                fontWeight: 500,
             },
             title: {
                 fontFamily: "Roboto Mono, monospace",
                 fontWeight: 500,
                 color: "white",
+            },
+            titleColumn: {
+                display: 'flex',
+                flexDirection: 'column',
+                fontFamily: "Roboto Mono, monospace",
             }
         }
 
+        const dayOfWeek = this.state.time.toLocaleString('en-us', {  weekday: 'long' }).toUpperCase()
+
         return (
             <div style={styles.header}>
-                <div>TUESDAY 4-7-20</div>
+                <div>
+                    <div>{dayOfWeek}</div>
+                    <div>{this.state.time.toLocaleDateString()}</div>
+                </div>
+
                 <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
-                <div>CURRENT TIME: 5:19 PM</div>
+                <div style={styles.titleColumn}>
+                    <div>CURRENT TIME</div>
+                    <div>{formatTimeHHMM(this.state.time)}</div>
+                </div>
             </div>
         )
     }
@@ -165,14 +201,10 @@ export class SouthStationDepartureBoard extends React.Component {
         }
 
         const departureRows = this.state.departures.map(departure => {
-            const formattedDepartureTime = new Date (departure.departureTime).toLocaleTimeString(
-                [], {hour: '2-digit', minute:'2-digit'}
-            )
-
             return (
                 <tr style={style.rows}>
                     <th style={style.cell}>MBTA</th>
-                    <th style={style.cell}>{formattedDepartureTime}</th>
+                    <th style={style.cell}>{formatTimeHHMM(departure.departureTime)}</th>
                     <th style={style.cell}>{departure.destination.toUpperCase()}</th>
                     <th style={style.cell}>{departure.trainNumber.toUpperCase()}</th>
                     <th style={style.cell}>{departure.trackNumber.toUpperCase()}</th>
