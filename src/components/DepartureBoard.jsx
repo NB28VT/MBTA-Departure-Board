@@ -58,8 +58,7 @@ class DepartureBoardModel {
         const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
 
         const sorted = hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
-
-        return sorted.slice(0, 15)
+        return sorted.slice(0, 10)
     }
 
     _parsePrediction(prediction) {
@@ -73,6 +72,36 @@ class DepartureBoardModel {
             trackNumber: "TBD",
             status: prediction.status || "ON TIME",
         }
+    }
+}
+
+class BoardHeader extends React.Component {
+    render() {
+        const styles = {
+            header: {
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                margin: "5px 10px 0px 10px",
+                fontSize: "100%",
+                // This will change once you add the clock and the date
+                height: '5vh',
+            },
+            title: {
+                fontFamily: "Roboto Mono, monospace",
+                fontWeight: 500,
+                color: "white",
+            }
+        }
+
+        return (
+            <div style={styles.header}>
+                <div>TUESDAY 4-7-20</div>
+                <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
+                <div>CURRENT TIME: 5:19 PM</div>
+            </div>
+        )
     }
 }
 
@@ -111,27 +140,30 @@ export class SouthStationDepartureBoard extends React.Component {
         const style = {
             container: {
                 backgroundImage: "linear-gradient(to top left, #000000, #333333)",
-                width: '50vw',
-                fontSize: "auto",
+                width: '65vw',
+                height: '45vh',
+                fontFamily: "Roboto Mono, monospace",
                 borderRadius: 5,
+                overflow: 'hidden',
             },
             headerRow: {
                 color: "white",
+                fontSize: "80%",
+                textAlign: 'center',
 
             },
-            // South station is actually more orangey
             rows: {
-                color: "#EBDC2B",
-                fontFamily: "Roboto Mono, monospace",
+                color: "#FFB400",
+                textAlign: "left",
 
             },
             table: {
                 width: "100%",
+                margin: 5,
             }
         }
 
         const departureRows = this.state.departures.map(departure => {
-
             const formattedDepartureTime = new Date (departure.departureTime).toLocaleTimeString(
                 [], {hour: '2-digit', minute:'2-digit'}
             )
@@ -140,25 +172,26 @@ export class SouthStationDepartureBoard extends React.Component {
                 <tr style={style.rows}>
                     <th style={style.cell}>MBTA</th>
                     <th style={style.cell}>{formattedDepartureTime}</th>
-                    <th style={style.cell}>{departure.destination}</th>
-                    <th style={style.cell}>{departure.trainNumber}</th>
-                    <th style={style.cell}>{departure.trackNumber}</th>
-                    <th style={style.cell}>{departure.status}</th>
+                    <th style={style.cell}>{departure.destination.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.trainNumber.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.trackNumber.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.status.toUpperCase()}</th>
                 </tr>
             )
         })
 
         return (
             <div style={style.container}>
+                <BoardHeader/>
                 <table style={style.table}>
                     <thead>
                         <tr style={style.headerRow}>
-                            <th>Carrier</th>
-                            <th>Time</th>
-                            <th>Destination</th>
-                            <th>Train#</th>
-                            <th>Track#</th>
-                            <th>Status</th>
+                            <th>CARRIER</th>
+                            <th>TIME</th>
+                            <th>DESTINATION</th>
+                            <th>TRAIN#</th>
+                            <th>TRACK#</th>
+                            <th>STATUS</th>
                         </tr>
                     </thead>
                     <tbody>
