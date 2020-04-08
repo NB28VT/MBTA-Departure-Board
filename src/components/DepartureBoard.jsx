@@ -87,6 +87,7 @@ class BoardHeader extends React.Component {
                 fontSize: "100%",
                 // This will change once you add the clock and the date
                 height: '5vh',
+                color: "#FFB400",
             },
             title: {
                 fontFamily: "Roboto Mono, monospace",
