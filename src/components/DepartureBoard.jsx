@@ -48,18 +48,23 @@ class DepartureBoardModel {
         // We need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
         const serializedEvents = {data: JSON.parse(event.data)}
 
+        // This is digusting we need a better way to handle this
         const normalizedEvents = this.dataStore.sync(serializedEvents)
-        const predictions = this.dataStore.findAll('prediction')
+        const predictions = this.dataStore.findAll('prediction')        // Might be able to combine these
         const allPredictions =  predictions.map(prediction => this._parsePrediction(prediction))
+
+        // Yeah def combine these - use like a method just for filtering
         const withDepartureTimes = allPredictions.filter(prediction => prediction.departureTime)
         const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
 
-        return hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
+        const sorted = hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
+        return sorted.slice(0, 10)
     }
 
     _parsePrediction(prediction) {
         // We don't appear to have access to track number any more, although at one time it appeared as a prediction attribute -
         // "stop_id": https://www.mbta.com/developers/v3-api/changelog
+
         return {
             departureTime: prediction.departure_time || prediction.schedule.departure_time,
             destination: prediction.trip.headsign,
@@ -67,6 +72,37 @@ class DepartureBoardModel {
             trackNumber: "TBD",
             status: prediction.status || "ON TIME",
         }
+    }
+}
+
+class BoardHeader extends React.Component {
+    render() {
+        const styles = {
+            header: {
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                margin: "5px 10px 0px 10px",
+                fontSize: "100%",
+                // This will change once you add the clock and the date
+                height: '5vh',
+                color: "#FFB400",
+            },
+            title: {
+                fontFamily: "Roboto Mono, monospace",
+                fontWeight: 500,
+                color: "white",
+            }
+        }
+
+        return (
+            <div style={styles.header}>
+                <div>TUESDAY 4-7-20</div>
+                <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
+                <div>CURRENT TIME: 5:19 PM</div>
+            </div>
+        )
     }
 }
 
@@ -104,50 +140,64 @@ export class SouthStationDepartureBoard extends React.Component {
     render() {
         const style = {
             container: {
-                "backgroundColor": "black",
-                fontSize: 30,
-            },
-            header: {
-                "color": "white",
-            },
-            // South station is actually more orangey
-            rows: {
-                "color": "#EBDC2B",
+                backgroundImage: "linear-gradient(to top left, #000000, #333333)",
+                width: '65vw',
+                height: '45vh',
                 fontFamily: "Roboto Mono, monospace",
+                borderRadius: 5,
+                overflow: 'hidden',
+            },
+            headerRow: {
+                color: "white",
+                fontSize: "80%",
+                textAlign: 'center',
 
             },
-            cell: {
-                padding: 10,
+            rows: {
+                color: "#FFB400",
+                textAlign: "left",
+
+            },
+            table: {
+                width: "100%",
+                margin: 5,
             }
         }
 
         const departureRows = this.state.departures.map(departure => {
+            const formattedDepartureTime = new Date (departure.departureTime).toLocaleTimeString(
+                [], {hour: '2-digit', minute:'2-digit'}
+            )
+
             return (
                 <tr style={style.rows}>
                     <th style={style.cell}>MBTA</th>
-                    <th style={style.cell}>{departure.departureTime}</th>
-                    <th style={style.cell}>{departure.destination}</th>
-                    <th style={style.cell}>{departure.trainNumber}</th>
-                    <th style={style.cell}>{departure.trackNumber}</th>
-                    <th style={style.cell}>{departure.status}</th>
+                    <th style={style.cell}>{formattedDepartureTime}</th>
+                    <th style={style.cell}>{departure.destination.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.trainNumber.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.trackNumber.toUpperCase()}</th>
+                    <th style={style.cell}>{departure.status.toUpperCase()}</th>
                 </tr>
             )
         })
 
         return (
             <div style={style.container}>
-                <table>
-                    <thead style={style.header}>
-                        <tr>
-                            <th>Carrier</th>
-                            <th>Time</th>
-                            <th>Destination</th>
-                            <th>Train#</th>
-                            <th>Track#</th>
-                            <th>Status</th>
+                <BoardHeader/>
+                <table style={style.table}>
+                    <thead>
+                        <tr style={style.headerRow}>
+                            <th>CARRIER</th>
+                            <th>TIME</th>
+                            <th>DESTINATION</th>
+                            <th>TRAIN#</th>
+                            <th>TRACK#</th>
+                            <th>STATUS</th>
                         </tr>
                     </thead>
-                    {departureRows}
+                    <tbody>
+                        {departureRows}
+                    </tbody>
                 </table>
             </div>
         )
