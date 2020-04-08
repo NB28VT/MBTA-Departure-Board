@@ -29,13 +29,15 @@ class DepartureBoardModel {
     }
 
     _buildPredictionsEndpoint() {
-        const base_url = "https://api-v3.mbta.com/predictions?"
-        const filters = `filter[route_type]=${this.routeType}&filter[stop]=${this.stationID}`
-        const limit = `&page[limit]=${this.pageLimit}`
-        const include = '&include=schedule,trip'
-        const api_key = `&api_key=${process.env.REACT_APP_MBTA_API_KEY}`
+        const queryParams = {
+            "filter[route_type]": this.routeType,
+            "filter[stop]": this.stationID,
+            "page[limit]": this.pageLimit,
+            "include": 'schedule,trip',
+            "api_key": process.env.REACT_APP_MBTA_API_KEY,
+        }
 
-        return base_url + filters + limit + include + api_key
+        return "https://api-v3.mbta.com/predictions?" + new URLSearchParams(queryParams).toString()
     }
 
     _parsePredictionsUpdate(event) {
