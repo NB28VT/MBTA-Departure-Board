@@ -1,5 +1,4 @@
 import React from 'react'
-import { APIClient } from '../services/APIClient'
 import { JsonApiDataStore } from 'jsonapi-datastore'
 
 function formatTimeHHMM(date) {
@@ -12,8 +11,8 @@ class DepartureBoardModel {
         this.stationID = stationID
         this.pageLimit = pageLimit
 
-        const departureEndpoint = this._buildPredictionsEndpoint()
-        this.departuresUpdateSource = new EventSource(departureEndpoint)
+        const predictionsEndpoint = this._buildPredictionsEndpoint()
+        this.departuresUpdateSource = new EventSource(predictionsEndpoint)
         this.dataStore = new JsonApiDataStore()
     }
 
@@ -29,13 +28,15 @@ class DepartureBoardModel {
     }
 
     _buildPredictionsEndpoint() {
-        const base_url = "https://api-v3.mbta.com/predictions?"
-        const filters = `filter[route_type]=${this.routeType}&filter[stop]=${this.stationID}`
-        const limit = `&page[limit]=${this.pageLimit}`
-        const include = '&include=schedule,trip'
-        const api_key = `&api_key=${process.env.REACT_APP_MBTA_API_KEY}`
+        const queryParams = {
+            "filter[route_type]": this.routeType,
+            "filter[stop]": this.stationID,
+            "page[limit]": this.pageLimit,
+            "include": 'schedule,trip',
+            "api_key": process.env.REACT_APP_MBTA_API_KEY,
+        }
 
-        return base_url + filters + limit + include + api_key
+        return "https://api-v3.mbta.com/predictions?" + new URLSearchParams(queryParams).toString()
     }
 
     _parsePredictionsUpdate(event) {
@@ -43,25 +44,21 @@ class DepartureBoardModel {
          * Parses Event Stream updates from the MBTA Predictions endpoint. Because neither the prediction nor its related schedule
          * will always have a departure time, we filter out anything missing that data. We also filter out trips that have already
          * departed. Because we are falling back on the schedule departure time if the prediction departure time is missing, we can't
-         * simply sort on departure time off of the predcitions endpoint. Instead, we manually sort the data by departure time
-         * ascending once we've filtered it.
+         * simply pass a sort param to the predictions endpoint. Instead, we manually sort the data by departure time ascending once 
+         * we've filtered it.
          *
          * TODO: find a better way to handle missing departure times if possible.
          */
 
         // We need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
-        const serializedEvents = {data: JSON.parse(event.data)}
+        this.dataStore.sync({data: JSON.parse(event.data)})
 
-        // This is digusting we need a better way to handle this
-        const normalizedEvents = this.dataStore.sync(serializedEvents)
-        const predictions = this.dataStore.findAll('prediction')        // Might be able to combine these
-        const allPredictions =  predictions.map(prediction => this._parsePrediction(prediction))
+        const parsedPredictions = this.dataStore.findAll('prediction').map(prediction => this._parsePrediction(prediction))
+        const filteredPredictions = parsedPredictions.filter((prediction) => {
+            return (prediction.departureTime) && (prediction.status !== "Departed")
+        })
+        const sorted = filteredPredictions.sort((a,b) =>  new Date(a.departureTime) - new Date(b.departureTime))
 
-        // Yeah def combine these - use like a method just for filtering
-        const withDepartureTimes = allPredictions.filter(prediction => prediction.departureTime)
-        const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
-
-        const sorted = hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
         return sorted.slice(0, 10)
     }
 
@@ -79,8 +76,7 @@ class DepartureBoardModel {
     }
 }
 
-
-class BoardHeader extends React.Component {
+class DepartureBoardHeader extends React.Component {
     constructor(props) {
         super(props)
 
@@ -88,20 +84,20 @@ class BoardHeader extends React.Component {
     }
 
     componentDidMount = () => {
-        this.timeCheck = setInterval(() =>  this.checkTime(), 1000)
+        this.timeCheck = setInterval(() =>  this._checkTime(), 1000)
     }
 
     componentWillUnmount = () => {
         clearInterval(this.timeCheck)
     }
 
-    checkTime = () => {
+    _checkTime = () => {
         this.setState({time: new Date()})
     }
 
     render() {
         const styles = {
-            header: {
+            container: {
                 display: 'flex',
                 flexDirection: 'row',
                 justifyContent: 'space-between',
@@ -112,52 +108,65 @@ class BoardHeader extends React.Component {
                 fontWeight: 500,
             },
             title: {
-                fontFamily: "Roboto Mono, monospace",
-                fontWeight: 500,
                 color: "white",
             },
-            titleColumn: {
-                display: 'flex',
-                flexDirection: 'column',
-                fontFamily: "Roboto Mono, monospace",
-            }
         }
 
-        const dayOfWeek = this.state.time.toLocaleString('en-us', {  weekday: 'long' }).toUpperCase()
+        const dayOfWeek = this.state.time.toLocaleString('en-us', {weekday: 'long'}).toUpperCase()
+        const date = this.state.time.toLocaleDateString()
+        const clockTime = formatTimeHHMM(this.state.time)
 
         return (
-            <div style={styles.header}>
+            <div style={styles.container}>
                 <div>
                     <div>{dayOfWeek}</div>
-                    <div>{this.state.time.toLocaleDateString()}</div>
+                    <div>{date}</div>
                 </div>
-                <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
-                <div style={styles.titleColumn}>
+                <div style={styles.title}>
+                    SOUTH STATION TRAIN INFORMATION
+                </div>
+                <div>
                     <div>CURRENT TIME</div>
-                    <div>{formatTimeHHMM(this.state.time)}</div>
+                    <div>{clockTime}</div>
                 </div>
             </div>
         )
     }
 }
 
+function DepartureTableRow(props) {
+    const style = {
+        color: "#FFB400",
+        textAlign: "left",
+    }
+
+    const departure = props.departure
+    const departureTime = formatTimeHHMM(departure.departureTime)
+
+    return (
+        <tr style={style}>
+            <th>MBTA</th>
+            <th>{departureTime}</th>
+            <th>{departure.destination.toUpperCase()}</th>
+            <th>{departure.trainNumber.toUpperCase()}</th>
+            <th>{departure.trackNumber.toUpperCase()}</th>
+            <th>{departure.status.toUpperCase()}</th>
+        </tr>
+    )
+}
 
 export class SouthStationDepartureBoard extends React.Component {
     constructor(props) {
         super(props)
-        
-        // Codes for Commuter Rail routes that stop at South Station
-        const stationID = "place-sstat"
-        const routeType = 2
 
+        // Codes for Commuter Rail routes that stop at South Station
+        const routeType = 2
+        const stationID = "place-sstat"
         // For now: load more than we plan to display as we need to filter out incomplete data
         const pageLimit = 30
 
         this.model = new DepartureBoardModel(routeType, stationID, pageLimit)
-
-        this.state = {
-            departures: []
-        }
+        this.state = {departures: []}
     }
 
     componentDidMount = () => {
@@ -182,16 +191,10 @@ export class SouthStationDepartureBoard extends React.Component {
                 borderRadius: 5,
                 overflow: 'hidden',
             },
-            headerRow: {
+            departuresHeader: {
                 color: "white",
                 fontSize: "80%",
-                textAlign: 'center',
-
-            },
-            rows: {
-                color: "#FFB400",
-                textAlign: "left",
-
+                textAlign: 'left',
             },
             table: {
                 width: "100%",
@@ -199,33 +202,26 @@ export class SouthStationDepartureBoard extends React.Component {
             }
         }
 
-        const departureRows = this.state.departures.map(departure => {
-            return (
-                <tr style={style.rows}>
-                    <th style={style.cell}>MBTA</th>
-                    <th style={style.cell}>{formatTimeHHMM(departure.departureTime)}</th>
-                    <th style={style.cell}>{departure.destination.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.trainNumber.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.trackNumber.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.status.toUpperCase()}</th>
+        const departuresHeader = (
+            <thead>
+                <tr style={style.departuresHeader}>
+                    <th>CARRIER</th>
+                    <th>TIME</th>
+                    <th>DESTINATION</th>
+                    <th>TRAIN#</th>
+                    <th>TRACK#</th>
+                    <th>STATUS</th>
                 </tr>
-            )
-        })
+            </thead>
+        )
+
+        const departureRows = this.state.departures.map((departure, i) => <DepartureTableRow key={i} departure={departure}/>)
 
         return (
             <div style={style.container}>
-                <BoardHeader/>
+                <DepartureBoardHeader/>
                 <table style={style.table}>
-                    <thead>
-                        <tr style={style.headerRow}>
-                            <th>CARRIER</th>
-                            <th>TIME</th>
-                            <th>DESTINATION</th>
-                            <th>TRAIN#</th>
-                            <th>TRACK#</th>
-                            <th>STATUS</th>
-                        </tr>
-                    </thead>
+                    {departuresHeader}
                     <tbody>
                         {departureRows}
                     </tbody>
