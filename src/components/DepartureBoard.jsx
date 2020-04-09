@@ -45,25 +45,21 @@ class DepartureBoardModel {
          * Parses Event Stream updates from the MBTA Predictions endpoint. Because neither the prediction nor its related schedule
          * will always have a departure time, we filter out anything missing that data. We also filter out trips that have already
          * departed. Because we are falling back on the schedule departure time if the prediction departure time is missing, we can't
-         * simply sort on departure time off of the predcitions endpoint. Instead, we manually sort the data by departure time
-         * ascending once we've filtered it.
+         * simply pass a sort param to the predictions endpoint. Instead, we manually sort the data by departure time ascending once 
+         * we've filtered it.
          *
          * TODO: find a better way to handle missing departure times if possible.
          */
 
         // We need to assign our parsed events data to an object "data" property to play nice with JsonAPIDataStore
-        const serializedEvents = {data: JSON.parse(event.data)}
+        this.dataStore.sync({data: JSON.parse(event.data)})
 
-        // This is digusting we need a better way to handle this
-        const normalizedEvents = this.dataStore.sync(serializedEvents)
-        const predictions = this.dataStore.findAll('prediction')        // Might be able to combine these
-        const allPredictions =  predictions.map(prediction => this._parsePrediction(prediction))
+        const parsedPredictions = this.dataStore.findAll('prediction').map(prediction => this._parsePrediction(prediction))
+        const filteredPredictions = parsedPredictions.filter((prediction) => {
+            return (prediction.departureTime) && (prediction.status !== "Departed")
+        })
+        const sorted = filteredPredictions.sort((a,b) =>  new Date(a.departureTime) - new Date(b.departureTime))
 
-        // Yeah def combine these - use like a method just for filtering
-        const withDepartureTimes = allPredictions.filter(prediction => prediction.departureTime)
-        const hasNotDeparted = withDepartureTimes.filter(prediction => prediction.status !== "Departed")
-
-        const sorted = hasNotDeparted.sort((a,b) => new Date(a.departureTime) - new Date(b.departureTime))
         return sorted.slice(0, 10)
     }
 
@@ -90,14 +86,14 @@ class BoardHeader extends React.Component {
     }
 
     componentDidMount = () => {
-        this.timeCheck = setInterval(() =>  this.checkTime(), 1000)
+        this.timeCheck = setInterval(() =>  this._checkTime(), 1000)
     }
 
     componentWillUnmount = () => {
         clearInterval(this.timeCheck)
     }
 
-    checkTime = () => {
+    _checkTime = () => {
         this.setState({time: new Date()})
     }
 
