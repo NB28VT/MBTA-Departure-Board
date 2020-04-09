@@ -215,7 +215,7 @@ export class SouthStationDepartureBoard extends React.Component {
             </thead>
         )
 
-        const departureRows = this.state.departures.map(departure => <DepartureTableRow departure={departure}/>)
+        const departureRows = this.state.departures.map((departure, i) => <DepartureTableRow key={i} departure={departure}/>)
 
         return (
             <div style={style.container}>
