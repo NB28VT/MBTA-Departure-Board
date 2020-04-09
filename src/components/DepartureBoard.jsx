@@ -1,5 +1,4 @@
 import React from 'react'
-import { APIClient } from '../services/APIClient'
 import { JsonApiDataStore } from 'jsonapi-datastore'
 
 function formatTimeHHMM(date) {
