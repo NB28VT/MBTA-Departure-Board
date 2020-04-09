@@ -11,8 +11,8 @@ class DepartureBoardModel {
         this.stationID = stationID
         this.pageLimit = pageLimit
 
-        const departureEndpoint = this._buildPredictionsEndpoint()
-        this.departuresUpdateSource = new EventSource(departureEndpoint)
+        const predictionsEndpoint = this._buildPredictionsEndpoint()
+        this.departuresUpdateSource = new EventSource(predictionsEndpoint)
         this.dataStore = new JsonApiDataStore()
     }
 
@@ -76,8 +76,7 @@ class DepartureBoardModel {
     }
 }
 
-
-class BoardHeader extends React.Component {
+class DepartureBoardHeader extends React.Component {
     constructor(props) {
         super(props)
 
@@ -98,7 +97,7 @@ class BoardHeader extends React.Component {
 
     render() {
         const styles = {
-            header: {
+            container: {
                 display: 'flex',
                 flexDirection: 'row',
                 justifyContent: 'space-between',
@@ -109,52 +108,65 @@ class BoardHeader extends React.Component {
                 fontWeight: 500,
             },
             title: {
-                fontFamily: "Roboto Mono, monospace",
-                fontWeight: 500,
                 color: "white",
             },
-            titleColumn: {
-                display: 'flex',
-                flexDirection: 'column',
-                fontFamily: "Roboto Mono, monospace",
-            }
         }
 
-        const dayOfWeek = this.state.time.toLocaleString('en-us', {  weekday: 'long' }).toUpperCase()
+        const dayOfWeek = this.state.time.toLocaleString('en-us', {weekday: 'long'}).toUpperCase()
+        const date = this.state.time.toLocaleDateString()
+        const clockTime = formatTimeHHMM(this.state.time)
 
         return (
-            <div style={styles.header}>
+            <div style={styles.container}>
                 <div>
                     <div>{dayOfWeek}</div>
-                    <div>{this.state.time.toLocaleDateString()}</div>
+                    <div>{date}</div>
                 </div>
-                <div style={styles.title}>SOUTH STATION TRAIN INFORMATION</div>
-                <div style={styles.titleColumn}>
+                <div style={styles.title}>
+                    SOUTH STATION TRAIN INFORMATION
+                </div>
+                <div>
                     <div>CURRENT TIME</div>
-                    <div>{formatTimeHHMM(this.state.time)}</div>
+                    <div>{clockTime}</div>
                 </div>
             </div>
         )
     }
 }
 
+function DepartureTableRow(props) {
+    const style = {
+        color: "#FFB400",
+        textAlign: "left",
+    }
+
+    const departure = props.departure
+    const departureTime = formatTimeHHMM(departure.departureTime)
+
+    return (
+        <tr style={style}>
+            <th>MBTA</th>
+            <th>{departureTime}</th>
+            <th>{departure.destination.toUpperCase()}</th>
+            <th>{departure.trainNumber.toUpperCase()}</th>
+            <th>{departure.trackNumber.toUpperCase()}</th>
+            <th>{departure.status.toUpperCase()}</th>
+        </tr>
+    )
+}
 
 export class SouthStationDepartureBoard extends React.Component {
     constructor(props) {
         super(props)
-        
-        // Codes for Commuter Rail routes that stop at South Station
-        const stationID = "place-sstat"
-        const routeType = 2
 
+        // Codes for Commuter Rail routes that stop at South Station
+        const routeType = 2
+        const stationID = "place-sstat"
         // For now: load more than we plan to display as we need to filter out incomplete data
         const pageLimit = 30
 
         this.model = new DepartureBoardModel(routeType, stationID, pageLimit)
-
-        this.state = {
-            departures: []
-        }
+        this.state = {departures: []}
     }
 
     componentDidMount = () => {
@@ -179,16 +191,10 @@ export class SouthStationDepartureBoard extends React.Component {
                 borderRadius: 5,
                 overflow: 'hidden',
             },
-            headerRow: {
+            departuresHeader: {
                 color: "white",
                 fontSize: "80%",
                 textAlign: 'center',
-
-            },
-            rows: {
-                color: "#FFB400",
-                textAlign: "left",
-
             },
             table: {
                 width: "100%",
@@ -196,33 +202,26 @@ export class SouthStationDepartureBoard extends React.Component {
             }
         }
 
-        const departureRows = this.state.departures.map(departure => {
-            return (
-                <tr style={style.rows}>
-                    <th style={style.cell}>MBTA</th>
-                    <th style={style.cell}>{formatTimeHHMM(departure.departureTime)}</th>
-                    <th style={style.cell}>{departure.destination.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.trainNumber.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.trackNumber.toUpperCase()}</th>
-                    <th style={style.cell}>{departure.status.toUpperCase()}</th>
+        const departuresHeader = (
+            <thead>
+                <tr style={style.departuresHeader}>
+                    <th>CARRIER</th>
+                    <th>TIME</th>
+                    <th>DESTINATION</th>
+                    <th>TRAIN#</th>
+                    <th>TRACK#</th>
+                    <th>STATUS</th>
                 </tr>
-            )
-        })
+            </thead>
+        )
+
+        const departureRows = this.state.departures.map(departure => <DepartureTableRow departure={departure}/>)
 
         return (
             <div style={style.container}>
-                <BoardHeader/>
+                <DepartureBoardHeader/>
                 <table style={style.table}>
-                    <thead>
-                        <tr style={style.headerRow}>
-                            <th>CARRIER</th>
-                            <th>TIME</th>
-                            <th>DESTINATION</th>
-                            <th>TRAIN#</th>
-                            <th>TRACK#</th>
-                            <th>STATUS</th>
-                        </tr>
-                    </thead>
+                    {departuresHeader}
                     <tbody>
                         {departureRows}
                     </tbody>
