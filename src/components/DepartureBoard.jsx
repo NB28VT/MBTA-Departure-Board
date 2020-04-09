@@ -194,7 +194,7 @@ export class SouthStationDepartureBoard extends React.Component {
             departuresHeader: {
                 color: "white",
                 fontSize: "80%",
-                textAlign: 'center',
+                textAlign: 'left',
             },
             table: {
                 width: "100%",
