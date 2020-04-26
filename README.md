@@ -1,68 +1,25 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# MBTA South Station Departure Board
 
-## Available Scripts
+![mbta_board_screenshot](images/MBTADepartureBoardScreenshot.png)
 
-In the project directory, you can run:
+## Overview
 
-### `npm start`
+The purpose of this project was to build an approximation of a Massachusetts Bay Transportation Authority train departure board using the powerful [MBTA v3 Developer API](https://www.mbta.com/developers/v3-api). It's currently hosted on Heroku [here](https://mbta-departure-board-nb28vt.herokuapp.com/).
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The MBTA's API includes a number of interesting endpoints and features for retrieving near real-time data for trains and buses throughout the MBTA system. Among its coolest features:
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+* Data is formatted using the [JSONAPI](https://jsonapi.org/) standard, which makes parsing relations between resources easier (especially when leveraging one of several [language-specific client libraries](https://jsonapi.org/implementations/). I used [jsonapi-datastore](https://github.com/beauby/jsonapi-datastore)).
 
-### `npm test`
+* For some endpoints, it includes out-of-the box support for [event streaming](https://www.mbta.com/developers/v3-api/streaming) using the [JavaScript Event Source API](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+I decided to build this in React with [create-react-app](https://github.com/facebook/create-react-app), as that's the framework I am most familiar with and it's relatively straightforward. It has a lightweight Express server for running on Heroku.
 
-### `npm run build`
+## Current App Features
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+At the moment, the departure board includes:
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+* Departure Time, Destination, Train Number and Status for pending MBTA Commuter Rail departures from South Station in downtown Boston, Massachusetts.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+* Live updates on all ["reset" events](https://www.mbta.com/developers/v3-api/streaming)
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+* A simple live clock updated with [setTimeout](https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout)
