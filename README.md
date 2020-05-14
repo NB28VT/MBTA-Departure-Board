@@ -1,6 +1,6 @@
 # MBTA South Station Departure Board
 
-![mbta_board_screenshot](images/MBTADepartureBoardScreenshot.png)
+![mbta_board_screenshot](images/departure-board400.png)
 
 ## Overview
 
